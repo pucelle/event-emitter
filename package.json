@@ -1,0 +1,22 @@
+{
+	"name": "@pucelle/event-emitter",
+	"version": "1.3.0",
+	"description": "Just a Event Emitter",
+	"author": "pucelle",
+	"license": "MIT",
+	"homepage": "https://github.com/pucelle/event-emitter",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/pucelle/event-emitter.git"
+	},
+	"main": "out/index.js",
+	"types": "out/index.d.ts",
+	"scripts": {
+		"build": "tsc -b",
+		"watch": "tsc -b -w",
+		"prepublish": "tsc -b"
+	},
+	"devDependencies": {
+		"typescript": "^3.9.5"
+	}
+}
