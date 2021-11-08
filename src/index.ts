@@ -1,11 +1,19 @@
-// At beginning, I implemented a good Emitter by inferring listener parameters and emitting parameters.
-// But then I meet a big problem when extending the class, described by:
-// https://stackoverflow.com/questions/55813041/problems-on-typescript-event-interface-extends
-
-// I'm trying to merge event listener interfaces but failed,
-// Guess the main reason is when one of the the event listener interface is generic parameter and not known yet,
-// TS can't merge two event listener interfaces and infer types of listener parameters for one listener,
-// The type of listener becomes `resolved Listener A & unresolved Listener B`, it's parameters can't be inferred.
+// It may be complex to implement a extendable event system,
+// and can infer event type and listener parameters.
+// 
+// Asume a class A:
+// `class A extends EventEmitter<AEvents>`
+//
+// And later a class B want to inherit A:
+// `class A<E> extends EventEmitter<AEvents & E>`
+// `class B extends A<BEvents>`
+//
+// Infering `(AEvents & E)[T]` will fail because E is unknown.
+// But can infer `key of (AEvents & E)`.
+//
+// Have no perfect solution, but two options:
+// 1. Only infer event type, not infer listener parameters.
+// 2. Explicitly specifies `this` in A as `A<{}>`, or just `A` if defined as `A<E = {}>.
 
 
 /** Cache each registered event. */
@@ -15,8 +23,10 @@ interface ListenerItem {
 	once: boolean
 }
 
-/** Event listener. */
-type EventListener = (...args: any[]) => void
+/** 
+ * Try infer parameters for function type, no type limit compare with `Parameters<...>`. */
+type InferParameters<T> = T extends (...args: any) => any ? T extends (...args: infer P) => any ? P : any[] : any[]
+
 
 
 /** 
@@ -45,7 +55,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param listener The event listener.
 	 * @param scope The scope will be binded to listener.
 	 */
-	on<T extends keyof E>(type: T, listener: EventListener, scope?: object) {
+	on<T extends keyof E>(type: T, listener: E[T], scope?: object) {
 		let listeners = this.__ensureListenerList(type)
 		
 		listeners.push({
@@ -61,7 +71,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param listener The event listener.
 	 * @param scope The scope will be binded to listener.
 	 */
-	once<T extends keyof E>(type: T, listener: EventListener, scope?: object) {
+	once<T extends keyof E>(type: T, listener: E[T], scope?: object) {
 		let listeners = this.__ensureListenerList(type)
 
 		listeners.push({
@@ -77,7 +87,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param listener The event listener, only matched listener will be removed.
 	 * @param scope The scope binded to listener. If provided, remove listener only when scope match.
 	 */
-	off<T extends keyof E>(type: T, listener: EventListener, scope?: object) {
+	off<T extends keyof E>(type: T, listener: E[T], scope?: object) {
 		let listeners = this.__listeners.get(type)
 		if (listeners) {
 			for (let i = listeners.length - 1; i >= 0; i--) {
@@ -128,7 +138,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param type The event type.
 	 * @param args The parameters that will be passed to event listeners.
 	 */
-	emit<T extends keyof E>(type: T, ...args: any[]) {
+	emit<T extends keyof E>(type: T, ...args: InferParameters<E[T]>) {
 		let listeners = this.__listeners.get(type)
 		if (listeners) {
 			for (let i = 0; i < listeners.length; i++) {
