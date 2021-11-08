@@ -9,46 +9,46 @@
 
 
 /** Cache each registered event. */
-interface EventItem {
+interface ListenerItem {
 	listener: any
 	scope?: object
 	once: boolean
 }
 
-/** Event handler. */
-type EventHandler = (...args: any[]) => void
+/** Event listener. */
+type EventListener = (...args: any[]) => void
 
 
 /** 
  * Event emitter as super class to listen and emit custom events.
  * It's name is Emitter to avoid conflicts with node API.
- * @typeparam E Event interface in `{eventName: (...args) => void}` format.
+ * @typeparam E Event interface in `{eventType: (...args) => void}` format.
  */
 export abstract class EventEmitter<E = any> {
 
-	/** Registered events. */
-	private __events: Map<keyof E, EventItem[]> = new Map()
+	/** Registered event listeners. */
+	private __listeners: Map<keyof E, ListenerItem[]> = new Map()
 
 	/** Ensure event cache items to cache item. */
-	private __ensureEvents<K extends keyof E>(name: K): EventItem[] {
-		let events = this.__events.get(name)
-		if (!events) {
-			this.__events.set(name, events = [])
+	private __ensureListenerList<T extends keyof E>(type: T): ListenerItem[] {
+		let listeners = this.__listeners.get(type)
+		if (!listeners) {
+			this.__listeners.set(type, listeners = [])
 		}
 
-		return events
+		return listeners
 	}
 
 	/**
-	 * Registers an event `listener` to listen event with specified `name`.
-	 * @param name The event name.
+	 * Registers an event `listener` to listen event with specified `type`.
+	 * @param type The event type.
 	 * @param listener The event listener.
 	 * @param scope The scope will be binded to listener.
 	 */
-	on<K extends keyof E>(name: K, listener: EventHandler, scope?: object) {
-		let events = this.__ensureEvents(name)
+	on<T extends keyof E>(type: T, listener: EventListener, scope?: object) {
+		let listeners = this.__ensureListenerList(type)
 		
-		events.push({
+		listeners.push({
 			listener,
 			scope,
 			once: false,
@@ -56,15 +56,15 @@ export abstract class EventEmitter<E = any> {
 	}
 
 	/**
-	 * Registers an event `listener` to listen event with specified `name`, triggers for only once.
-	 * @param name The event name.
+	 * Registers an event `listener` to listen event with specified `type`, triggers for only once.
+	 * @param type The event type.
 	 * @param listener The event listener.
 	 * @param scope The scope will be binded to listener.
 	 */
-	once<K extends keyof E>(name: K, listener: EventHandler, scope?: object) {
-		let events = this.__ensureEvents(name)
+	once<T extends keyof E>(type: T, listener: EventListener, scope?: object) {
+		let listeners = this.__ensureListenerList(type)
 
-		events.push({
+		listeners.push({
 			listener,
 			scope,
 			once: true
@@ -72,34 +72,38 @@ export abstract class EventEmitter<E = any> {
 	}
 
 	/**
-	 * Removes the `listener` that is listening specified event `name`.
-	 * @param name The event name.
+	 * Removes the `listener` that is listening specified event `type`.
+	 * @param type The event type.
 	 * @param listener The event listener, only matched listener will be removed.
 	 * @param scope The scope binded to listener. If provided, remove listener only when scope match.
 	 */
-	off<K extends keyof E>(name: K, listener: EventHandler, scope?: object) {
-		let events = this.__events.get(name)
-		if (events) {
-			for (let i = events.length - 1; i >= 0; i--) {
-				let event = events[i]
+	off<T extends keyof E>(type: T, listener: EventListener, scope?: object) {
+		let listeners = this.__listeners.get(type)
+		if (listeners) {
+			for (let i = listeners.length - 1; i >= 0; i--) {
+				let event = listeners[i]
 				if (event.listener === listener && (!scope || event.scope === scope)) {
-					events.splice(i, 1)
+					listeners.splice(i, 1)
 				}
+			}
+
+			if (listeners.length === 0) {
+				this.__listeners.delete(type)
 			}
 		}
 	}
 
 	/**
-	 * Check whether `listener` is in the list for listening specified event `name`.
-	 * @param name The event name.
+	 * Check whether `listener` is in the list for listening specified event `type`.
+	 * @param type The event type.
 	 * @param listener The event listener to check.
 	 * @param scope The scope binded to listener. If provided, will additionally check whether the scope match.
 	 */
-	hasListener(name: string, listener: Function, scope?: object) {
-		let events = this.__events.get(name as any)
-		if (events) {
-			for (let i = 0, len = events.length; i < len; i++) {
-				let event = events[i]
+	hasListener(type: string, listener: Function, scope?: object) {
+		let listeners = this.__listeners.get(type as any)
+		if (listeners) {
+			for (let i = 0, len = listeners.length; i < len; i++) {
+				let event = listeners[i]
 
 				if (event.listener === listener && (!scope || event.scope === scope)) {
 					return true
@@ -111,28 +115,28 @@ export abstract class EventEmitter<E = any> {
 	}
 
 	/**
-	 * Check whether any `listener` is listening specified event `name`.
-	 * @param name The event name.
+	 * Check whether any `listener` is listening specified event `type`.
+	 * @param type The event type.
 	 */
-	hasListeners(name: string) {
-		let events = this.__events.get(name as any)
-		return !!events && events.length > 0
+	hasListenerType(type: string) {
+		let listeners = this.__listeners.get(type as any)
+		return !!listeners && listeners.length > 0
 	}
 
 	/**
-	 * Emit specified event with event `name` and parameters.
-	 * @param name The event name.
+	 * Emit specified event with event `type` and parameters.
+	 * @param type The event type.
 	 * @param args The parameters that will be passed to event listeners.
 	 */
-	emit<K extends keyof E>(name: K, ...args: any[]) {
-		let events = this.__events.get(name)
-		if (events) {
-			for (let i = 0; i < events.length; i++) {
-				let event = events[i]
+	emit<T extends keyof E>(type: T, ...args: any[]) {
+		let listeners = this.__listeners.get(type)
+		if (listeners) {
+			for (let i = 0; i < listeners.length; i++) {
+				let event = listeners[i]
 
 				// The listener may call off, so must remove it before handling
 				if (event.once === true) {
-					events.splice(i--, 1)
+					listeners.splice(i--, 1)
 				}
 
 				event.listener.apply(event.scope, args)
@@ -142,6 +146,6 @@ export abstract class EventEmitter<E = any> {
 
 	/** Removes all the event listeners. */
 	removeAllListeners() {
-		this.__events = new Map()
+		this.__listeners = new Map()
 	}
 }
