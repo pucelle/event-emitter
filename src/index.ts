@@ -36,11 +36,18 @@ type InferParameters<T> = T extends (...args: any) => any ? T extends (...args: 
  */
 export abstract class EventEmitter<E = any> {
 
-	/** Registered event listeners. */
-	private __listeners: Map<keyof E, ListenerItem[]> = new Map()
+	/** Binded event listeners. */
+	private __listeners: Map<keyof E, ListenerItem[]> | null = null
+
+	/** Which will be broadcasted to. */
+	private __willBroadcastTo: Set<EventEmitter> | null = null
 
 	/** Ensure event cache items to cache item. */
 	private __ensureListenerList<T extends keyof E>(type: T): ListenerItem[] {
+		if (!this.__listeners) {
+			this.__listeners = new Map()
+		}
+
 		let listeners = this.__listeners.get(type)
 		if (!listeners) {
 			this.__listeners.set(type, listeners = [])
@@ -88,7 +95,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param scope The scope binded to listener. If provided, remove listener only when scope match.
 	 */
 	off<T extends keyof E>(type: T, listener: E[T], scope?: object) {
-		let listeners = this.__listeners.get(type)
+		let listeners = this.__listeners?.get(type)
 		if (listeners) {
 			for (let i = listeners.length - 1; i >= 0; i--) {
 				let event = listeners[i]
@@ -98,7 +105,7 @@ export abstract class EventEmitter<E = any> {
 			}
 
 			if (listeners.length === 0) {
-				this.__listeners.delete(type)
+				this.__listeners!.delete(type)
 			}
 		}
 	}
@@ -110,7 +117,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param scope The scope binded to listener. If provided, will additionally check whether the scope match.
 	 */
 	hasListener(type: string, listener: Function, scope?: object) {
-		let listeners = this.__listeners.get(type as any)
+		let listeners = this.__listeners?.get(type as any)
 		if (listeners) {
 			for (let i = 0, len = listeners.length; i < len; i++) {
 				let event = listeners[i]
@@ -129,7 +136,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param type The event type.
 	 */
 	hasListenerType(type: string) {
-		let listeners = this.__listeners.get(type as any)
+		let listeners = this.__listeners?.get(type as any)
 		return !!listeners && listeners.length > 0
 	}
 
@@ -139,7 +146,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param args The parameters that will be passed to event listeners.
 	 */
 	emit<T extends keyof E>(type: T, ...args: InferParameters<E[T]>) {
-		let listeners = this.__listeners.get(type)
+		let listeners = this.__listeners?.get(type)
 		if (listeners) {
 			for (let i = 0; i < listeners.length; i++) {
 				let event = listeners[i]
@@ -157,5 +164,23 @@ export abstract class EventEmitter<E = any> {
 	/** Removes all the event listeners. */
 	removeAllListeners() {
 		this.__listeners = new Map()
+	}
+
+	/** Broadcast events to a parent emitter. */
+	broadcastTo(target: EventEmitter) {
+		if (!this.__willBroadcastTo) {
+			this.__willBroadcastTo = new Set()
+		}
+
+		this.__willBroadcastTo.add(target)
+	}
+
+	/** Stop broadcast events to a parent emitter. */
+	unBroadcastTo(target: EventEmitter) {
+		if (!this.__willBroadcastTo) {
+			this.__willBroadcastTo = new Set()
+		}
+
+		this.__willBroadcastTo.delete(target)
 	}
 }
