@@ -1,19 +1,18 @@
 // It may be complex to implement a extendable event system,
 // and can infer event type and listener parameters.
 // 
-// Asume a class A:
+// Asume a class `A`:
 // `class A extends EventEmitter<AEvents>`
 //
-// And later a class B want to inherit A:
+// And later a class `B` inherit `A`:
 // `class A<E> extends EventEmitter<AEvents & E>`
 // `class B extends A<BEvents>`
 //
 // Infering `(AEvents & E)[T]` will fail because E is unknown.
-// But can infer `key of (AEvents & E)`.
 //
-// Have no perfect solution, but two options:
-// 1. Only infer event type, not infer listener parameters.
-// 2. Explicitly specifies `this` in A as `A<{}>`, or just `A` if defined as `A<E = {}>.
+// Have no good solution, but two options:
+// 1. Only infer event type, but not listener parameters.
+// 2. Explicitly specifies `this` in A as `A<{}>` in the function which will call `emit`.
 
 
 /** Cache each registered event. */
@@ -25,7 +24,11 @@ interface ListenerItem {
 
 /** 
  * Try infer parameters for function type, no type limit compare with `Parameters<...>`. */
-type InferParameters<T> = T extends (...args: any) => any ? T extends (...args: infer P) => any ? P : any[] : any[]
+type InferParameters<T> = T extends (...args: any) => any
+	? T extends (...args: infer P) => any
+		? P
+		: any[]
+	: any[]
 
 
 
