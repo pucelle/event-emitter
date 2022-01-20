@@ -148,7 +148,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param type The event type.
 	 * @param args The parameters that will be passed to event listeners.
 	 */
-	emit<T extends keyof E>(type: T, ...args: InferParameters<E[T]>) {
+	protected emit<T extends keyof E>(type: T, ...args: InferParameters<E[T]>) {
 		let listeners = this.__listeners?.get(type)
 		if (listeners) {
 			for (let i = 0; i < listeners.length; i++) {
