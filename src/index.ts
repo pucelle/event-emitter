@@ -119,7 +119,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param listener The event listener to check.
 	 * @param scope The scope binded to listener. If provided, will additionally check whether the scope match.
 	 */
-	hasListener(type: string, listener: Function, scope?: object) {
+	hasListener(type: string, listener: Function, scope?: object): boolean {
 		let listeners = this.__listeners?.get(type as any)
 		if (listeners) {
 			for (let i = 0, len = listeners.length; i < len; i++) {
@@ -138,9 +138,14 @@ export abstract class EventEmitter<E = any> {
 	 * Check whether any `listener` is listening specified event `type`.
 	 * @param type The event type.
 	 */
-	hasListenerType(type: string) {
+	hasListenerType(type: string): boolean {
 		let listeners = this.__listeners?.get(type as any)
 		return !!listeners && listeners.length > 0
+	}
+
+	/** Check whether have any type of listeners registered. */
+	hasListeners(): boolean {
+		return !!this.__listeners && this.__listeners.size > 0
 	}
 
 	/**
