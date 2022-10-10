@@ -12,7 +12,7 @@
 //
 // Have no good solution, but two options:
 // 1. Only infer event type, but not listener parameters.
-// 2. Explicitly specifies `this` in A as `A<{}>` in the function which will call `emit`.
+// 2. Explicitly specifies `this: A<{}>` in the function which will call `emit`.
 
 
 /** Cache each registered event. */
@@ -153,7 +153,7 @@ export abstract class EventEmitter<E = any> {
 	 * @param type The event type.
 	 * @param args The parameters that will be passed to event listeners.
 	 */
-	protected emit<T extends keyof E>(type: T, ...args: InferParameters<E[T]>) {
+	emit<T extends keyof E>(type: T, ...args: InferParameters<E[T]>) {
 		let listeners = this.__listeners?.get(type)
 		if (listeners) {
 			for (let i = 0; i < listeners.length; i++) {
@@ -183,12 +183,8 @@ export abstract class EventEmitter<E = any> {
 		this.__willBroadcastTo.add(target)
 	}
 
-	/** Stop broadcast events to a parent emitter. */
+	/** Stop broadcasting events to a parent emitter. */
 	unBroadcastTo(target: EventEmitter) {
-		if (!this.__willBroadcastTo) {
-			this.__willBroadcastTo = new Set()
-		}
-
-		this.__willBroadcastTo.delete(target)
+		this.__willBroadcastTo?.delete(target)
 	}
 }
